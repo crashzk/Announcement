@@ -11,62 +11,63 @@ use Cycle\ORM\Entity\Behavior;
 use DateTimeImmutable;
 
 #[Entity]
-#[Table(
-    indexes: [
-        new Index(columns: ["is_active"]),
-        new Index(columns: ["position"]),
-    ]
-)]
-#[Behavior\CreatedAt(
-    field: 'createdAt',
-    column: 'created_at'
-)]
-#[Behavior\UpdatedAt(
-    field: 'updatedAt',
-    column: 'updated_at'
-)]
+#[Table(indexes: [
+    new Index(columns: ['is_active']),
+    new Index(columns: ['position']),
+])]
+#[Behavior\CreatedAt(field: 'createdAt', column: 'created_at')]
+#[Behavior\UpdatedAt(field: 'updatedAt', column: 'updated_at')]
 class Announcement extends ActiveRecord
 {
-    #[Column(type: "primary")]
+    #[Column(type: 'primary')]
     public int $id;
 
-    #[Column(type: "text")]
+    #[Column(type: 'text')]
     public string $content;
 
-    #[Column(type: "string", nullable: true)]
+    #[Column(type: 'string', nullable: true)]
     public ?string $buttonText = null;
 
-    #[Column(type: "string", nullable: true)]
+    #[Column(type: 'string', nullable: true)]
     public ?string $buttonUrl = null;
 
-    #[Column(type: "string", nullable: true)]
+    #[Column(type: 'string', nullable: true)]
     public ?string $buttonIcon = null;
 
-    #[Column(type: "boolean", default: false)]
+    #[Column(type: 'boolean', default: false)]
     public bool $buttonNewTab = false;
 
-    #[Column(type: "string", default: "info")]
+    #[Column(type: 'string', nullable: true)]
+    public ?string $icon = null;
+
+    #[Column(type: 'string', nullable: true)]
+    public ?string $url = null;
+
+    #[Column(type: 'string', default: 'info')]
     public string $type = 'info';
 
-    #[Column(type: "boolean", default: false)]
+    #[Column(type: 'string', default: 'all')]
+    public string $target = 'all';
+
+    #[Column(type: 'boolean', default: false)]
     public bool $closable = false;
 
-    #[Column(type: "boolean", default: true)]
+    #[Column(type: 'boolean', default: true)]
     public bool $isActive = true;
 
-    #[Column(type: "integer", default: 0)]
+    #[Column(type: 'integer', default: 0)]
     public int $position = 0;
 
-    #[Column(type: "datetime", nullable: true)]
+    #[Column(type: 'datetime', nullable: true)]
     public ?DateTimeImmutable $startAt = null;
 
-    #[Column(type: "datetime", nullable: true)]
+    #[Column(type: 'datetime', nullable: true)]
     public ?DateTimeImmutable $endAt = null;
 
-    #[Column(type: "datetime")]
+    #[Column(type: 'datetime')]
     public DateTimeImmutable $createdAt;
 
-    #[Column(type: "datetime", nullable: true)]
+    #[Column(type: 'datetime', nullable: true)]
     public ?DateTimeImmutable $updatedAt = null;
 
     /**
@@ -84,10 +85,6 @@ class Announcement extends ActiveRecord
             return false;
         }
 
-        return !($this->endAt !== null && $now > $this->endAt)
-
-
-
-        ;
+        return !( $this->endAt !== null && $now > $this->endAt );
     }
 }

@@ -6,8 +6,10 @@ use DateTimeImmutable;
 use Flute\Admin\Platform\Actions\Button;
 use Flute\Admin\Platform\Actions\DropDown;
 use Flute\Admin\Platform\Actions\DropDownItem;
+use Flute\Admin\Platform\Fields\ButtonGroup;
 use Flute\Admin\Platform\Fields\CheckBox;
 use Flute\Admin\Platform\Fields\Input;
+use Flute\Admin\Platform\Fields\RadioCards;
 use Flute\Admin\Platform\Fields\Select;
 use Flute\Admin\Platform\Fields\Sight;
 use Flute\Admin\Platform\Layouts\LayoutFactory;
@@ -30,9 +32,7 @@ class AnnouncementScreen extends Screen
 
     public function mount(): void
     {
-        breadcrumb()
-            ->add(__('def.admin_panel'), url('/admin'))
-            ->add(__('admin-announcement.title'));
+        breadcrumb()->add(__('def.admin_panel'), url('/admin'))->add(__('admin-announcement.title'));
 
         $this->loadAnnouncements();
     }
@@ -41,46 +41,59 @@ class AnnouncementScreen extends Screen
     {
         return [
             LayoutFactory::sortable('announcements', [
-                Sight::make('content', __('admin-announcement.table.content'))
-                    ->render(static function (Announcement $announcement) {
-                        $badge = match ($announcement->type) {
-                            'success' => '<span class="badge success">' . __('admin-announcement.types.success') . '</span>',
-                            'warning' => '<span class="badge warning">' . __('admin-announcement.types.warning') . '</span>',
-                            'error' => '<span class="badge error">' . __('admin-announcement.types.error') . '</span>',
-                            default => '<span class="badge info">' . __('admin-announcement.types.info') . '</span>',
-                        };
-                        $content = e(mb_strimwidth($announcement->content, 0, 80, '...'));
+                Sight::make(
+                    'content',
+                    __('admin-announcement.table.content'),
+                )->render(static function (Announcement $announcement) {
+                    $badge = match ($announcement->type) {
+                        'success' => '<span class="badge success">'
+                            . __('admin-announcement.types.success')
+                            . '</span>',
+                        'warning' => '<span class="badge warning">'
+                            . __('admin-announcement.types.warning')
+                            . '</span>',
+                        'error' => '<span class="badge error">' . __('admin-announcement.types.error') . '</span>',
+                        default => '<span class="badge info">' . __('admin-announcement.types.info') . '</span>',
+                    };
+                    $content = e(mb_strimwidth($announcement->content, 0, 80, '...'));
 
-                        return '<div class="announcement-cell"><div class="announcement-type">' . $badge . '</div><div class="announcement-content">' . $content . '</div></div>';
-                    }),
-                Sight::make('isActive', __('admin-announcement.table.status'))
-                    ->render(static function (Announcement $announcement) {
-                        if ($announcement->isActive) {
-                            return '<span class="badge success">' . __('def.active') . '</span>';
-                        }
+                    return (
+                        '<div class="announcement-cell"><div class="announcement-type">'
+                        . $badge
+                        . '</div><div class="announcement-content">'
+                        . $content
+                        . '</div></div>'
+                    );
+                }),
+                Sight::make(
+                    'isActive',
+                    __('admin-announcement.table.status'),
+                )->render(static function (Announcement $announcement) {
+                    if ($announcement->isActive) {
+                        return '<span class="badge success">' . __('def.active') . '</span>';
+                    }
 
-                        return '<span class="badge">' . __('def.inactive') . '</span>';
-                    }),
-                Sight::make('actions', __('admin-announcement.table.actions'))
-                    ->render(
-                        static fn (Announcement $announcement) => DropDown::make()
-                            ->icon('ph.regular.dots-three-outline-vertical')
-                            ->list([
-                                DropDownItem::make(__('def.edit'))
-                                    ->modal('editAnnouncementModal', ['announcement' => $announcement->id])
-                                    ->icon('ph.bold.pencil-bold')
-                                    ->type(Color::OUTLINE_PRIMARY)
-                                    ->size('small')
-                                    ->fullWidth(),
-                                DropDownItem::make(__('def.delete'))
-                                    ->confirm(__('admin-announcement.confirms.delete'))
-                                    ->method('deleteAnnouncement', ['id' => $announcement->id])
-                                    ->icon('ph.bold.trash-bold')
-                                    ->type(Color::OUTLINE_DANGER)
-                                    ->size('small')
-                                    ->fullWidth(),
-                            ])
-                    ),
+                    return '<span class="badge">' . __('def.inactive') . '</span>';
+                }),
+                Sight::make('actions', __('admin-announcement.table.actions'))->render(
+                    static fn(Announcement $announcement) => DropDown::make()
+                        ->icon('ph.regular.dots-three-outline-vertical')
+                        ->list([
+                            DropDownItem::make(__('def.edit'))
+                                ->modal('editAnnouncementModal', ['announcement' => $announcement->id])
+                                ->icon('ph.bold.pencil-bold')
+                                ->type(Color::OUTLINE_PRIMARY)
+                                ->size('small')
+                                ->fullWidth(),
+                            DropDownItem::make(__('def.delete'))
+                                ->confirm(__('admin-announcement.confirms.delete'))
+                                ->method('deleteAnnouncement', ['id' => $announcement->id])
+                                ->icon('ph.bold.trash-bold')
+                                ->type(Color::OUTLINE_DANGER)
+                                ->size('small')
+                                ->fullWidth(),
+                        ]),
+                ),
             ])
                 ->onSortEnd('updatePositions')
                 ->commands([
@@ -141,28 +154,32 @@ class AnnouncementScreen extends Screen
 
         $validation = $this->validate([
             'content' => ['required', 'string'],
+            'icon' => ['nullable', 'string', 'max-str-len:255'],
+            'url' => ['nullable', 'string', 'max-str-len:255'],
             'button_text' => ['nullable', 'string', 'max-str-len:255'],
             'button_url' => ['nullable', 'string', 'max-str-len:255'],
             'button_icon' => ['nullable', 'string', 'max-str-len:255'],
             'type' => ['required', 'string', 'in:info,success,warning,error'],
+            'target' => ['required', 'string', 'in:all,guests,auth'],
         ], $data);
 
         if (!$validation) {
             return;
         }
 
-        $lastItem = Announcement::query()
-            ->orderBy('position', 'desc')
-            ->fetchOne();
+        $lastItem = Announcement::query()->orderBy('position', 'desc')->fetchOne();
         $position = $lastItem ? $lastItem->position + 1 : 1;
 
         $announcement = new Announcement();
         $announcement->content = $data['content'];
+        $announcement->icon = $data['icon'] ?? null;
+        $announcement->url = $data['url'] ?? null;
         $announcement->buttonText = $data['button_text'] ?? null;
         $announcement->buttonUrl = $data['button_url'] ?? null;
         $announcement->buttonIcon = $data['button_icon'] ?? null;
         $announcement->buttonNewTab = isset($data['button_new_tab']) && $data['button_new_tab'] ? true : false;
         $announcement->type = $data['type'] ?? 'info';
+        $announcement->target = $data['target'] ?? 'all';
         $announcement->closable = isset($data['closable']) && $data['closable'] ? true : false;
         $announcement->isActive = isset($data['is_active']) && $data['is_active'] ? true : false;
         $announcement->position = $position;
@@ -220,10 +237,13 @@ class AnnouncementScreen extends Screen
 
         $validation = $this->validate([
             'content' => ['required', 'string'],
+            'icon' => ['nullable', 'string', 'max-str-len:255'],
+            'url' => ['nullable', 'string', 'max-str-len:255'],
             'button_text' => ['nullable', 'string', 'max-str-len:255'],
             'button_url' => ['nullable', 'string', 'max-str-len:255'],
             'button_icon' => ['nullable', 'string', 'max-str-len:255'],
             'type' => ['required', 'string', 'in:info,success,warning,error'],
+            'target' => ['required', 'string', 'in:all,guests,auth'],
         ], $data);
 
         if (!$validation) {
@@ -231,11 +251,14 @@ class AnnouncementScreen extends Screen
         }
 
         $announcement->content = $data['content'];
+        $announcement->icon = $data['icon'] ?? null;
+        $announcement->url = $data['url'] ?? null;
         $announcement->buttonText = $data['button_text'] ?? null;
         $announcement->buttonUrl = $data['button_url'] ?? null;
         $announcement->buttonIcon = $data['button_icon'] ?? null;
         $announcement->buttonNewTab = isset($data['button_new_tab']) && $data['button_new_tab'] ? true : false;
         $announcement->type = $data['type'] ?? 'info';
+        $announcement->target = $data['target'] ?? 'all';
         $announcement->closable = isset($data['closable']) && $data['closable'] ? true : false;
         $announcement->isActive = isset($data['is_active']) && $data['is_active'] ? true : false;
 
@@ -283,9 +306,7 @@ class AnnouncementScreen extends Screen
 
     protected function loadAnnouncements()
     {
-        $this->announcements = Announcement::query()
-            ->orderBy('position', 'asc')
-            ->fetchAll();
+        $this->announcements = Announcement::query()->orderBy('position', 'asc')->fetchAll();
     }
 
     protected function getFormFields(?Announcement $announcement = null): array
@@ -295,32 +316,85 @@ class AnnouncementScreen extends Screen
                 Input::make('content')
                     ->type('textarea')
                     ->placeholder(__('admin-announcement.modal.fields.content.placeholder'))
-                    ->value($announcement?->content)
+                    ->value($announcement?->content),
             )
                 ->label(__('admin-announcement.modal.fields.content.label'))
                 ->required()
                 ->small(__('admin-announcement.modal.fields.content.help')),
 
             LayoutFactory::field(
-                Select::make('type')
+                RadioCards::make('type')
                     ->options([
-                        'info' => __('admin-announcement.types.info'),
-                        'success' => __('admin-announcement.types.success'),
-                        'warning' => __('admin-announcement.types.warning'),
-                        'error' => __('admin-announcement.types.error'),
+                        'info' => [
+                            'label' => __('admin-announcement.types.info'),
+                            'icon' => 'ph.bold.info-bold',
+                        ],
+                        'success' => [
+                            'label' => __('admin-announcement.types.success'),
+                            'icon' => 'ph.bold.check-circle-bold',
+                        ],
+                        'warning' => [
+                            'label' => __('admin-announcement.types.warning'),
+                            'icon' => 'ph.bold.warning-bold',
+                        ],
+                        'error' => [
+                            'label' => __('admin-announcement.types.error'),
+                            'icon' => 'ph.bold.warning-circle-bold',
+                        ],
                     ])
-                    ->value($announcement?->type ?? 'info')
+                    ->columns(4)
+                    ->value($announcement?->type ?? 'info'),
             )
                 ->label(__('admin-announcement.modal.fields.type.label'))
-                ->required()
-                ->small(__('admin-announcement.modal.fields.type.help')),
+                ->required(),
+
+            LayoutFactory::field(
+                ButtonGroup::make('target')
+                    ->options([
+                        'all' => [
+                            'label' => __('admin-announcement.targets.all'),
+                            'icon' => 'ph.bold.users-bold',
+                        ],
+                        'guests' => [
+                            'label' => __('admin-announcement.targets.guests'),
+                            'icon' => 'ph.bold.eye-bold',
+                        ],
+                        'auth' => [
+                            'label' => __('admin-announcement.targets.auth'),
+                            'icon' => 'ph.bold.lock-bold',
+                        ],
+                    ])
+                    ->value($announcement?->target ?? 'all'),
+            )
+                ->label(__('admin-announcement.modal.fields.target.label'))
+                ->small(__('admin-announcement.modal.fields.target.help')),
+
+            LayoutFactory::split([
+                LayoutFactory::field(
+                    Input::make('icon')
+                        ->type('icon')
+                        ->placeholder(__('admin-announcement.modal.fields.icon.placeholder'))
+                        ->value($announcement?->icon),
+                )
+                    ->label(__('admin-announcement.modal.fields.icon.label'))
+                    ->small(__('admin-announcement.modal.fields.icon.help')),
+
+                LayoutFactory::field(
+                    Input::make('url')
+                        ->type('text')
+                        ->placeholder(__('admin-announcement.modal.fields.url.placeholder'))
+                        ->value($announcement?->url),
+                )
+                    ->label(__('admin-announcement.modal.fields.url.label'))
+                    ->small(__('admin-announcement.modal.fields.url.help')),
+            ]),
 
             LayoutFactory::split([
                 LayoutFactory::field(
                     Input::make('button_text')
                         ->type('text')
                         ->placeholder(__('admin-announcement.modal.fields.button_text.placeholder'))
-                        ->value($announcement?->buttonText)
+                        ->value($announcement?->buttonText),
                 )
                     ->label(__('admin-announcement.modal.fields.button_text.label'))
                     ->small(__('admin-announcement.modal.fields.button_text.help')),
@@ -329,7 +403,7 @@ class AnnouncementScreen extends Screen
                     Input::make('button_url')
                         ->type('text')
                         ->placeholder(__('admin-announcement.modal.fields.button_url.placeholder'))
-                        ->value($announcement?->buttonUrl)
+                        ->value($announcement?->buttonUrl),
                 )
                     ->label(__('admin-announcement.modal.fields.button_url.label'))
                     ->small(__('admin-announcement.modal.fields.button_url.help')),
@@ -340,7 +414,7 @@ class AnnouncementScreen extends Screen
                     Input::make('button_icon')
                         ->type('icon')
                         ->placeholder(__('admin-announcement.modal.fields.button_icon.placeholder'))
-                        ->value($announcement?->buttonIcon)
+                        ->value($announcement?->buttonIcon),
                 )
                     ->label(__('admin-announcement.modal.fields.button_icon.label'))
                     ->small(__('admin-announcement.modal.fields.button_icon.help')),
@@ -349,7 +423,7 @@ class AnnouncementScreen extends Screen
                     CheckBox::make('button_new_tab')
                         ->label(__('admin-announcement.modal.fields.button_new_tab.label'))
                         ->popover(__('admin-announcement.modal.fields.button_new_tab.help'))
-                        ->value($announcement?->buttonNewTab ?? false)
+                        ->value($announcement?->buttonNewTab ?? false),
                 ),
             ]),
 
@@ -357,7 +431,7 @@ class AnnouncementScreen extends Screen
                 LayoutFactory::field(
                     Input::make('start_at')
                         ->type('datetime-local')
-                        ->value($announcement?->startAt?->format('Y-m-d\TH:i'))
+                        ->value($announcement?->startAt?->format('Y-m-d\TH:i')),
                 )
                     ->label(__('admin-announcement.modal.fields.start_at.label'))
                     ->small(__('admin-announcement.modal.fields.start_at.help')),
@@ -365,7 +439,7 @@ class AnnouncementScreen extends Screen
                 LayoutFactory::field(
                     Input::make('end_at')
                         ->type('datetime-local')
-                        ->value($announcement?->endAt?->format('Y-m-d\TH:i'))
+                        ->value($announcement?->endAt?->format('Y-m-d\TH:i')),
                 )
                     ->label(__('admin-announcement.modal.fields.end_at.label'))
                     ->small(__('admin-announcement.modal.fields.end_at.help')),
@@ -376,14 +450,14 @@ class AnnouncementScreen extends Screen
                     CheckBox::make('closable')
                         ->label(__('admin-announcement.modal.fields.closable.label'))
                         ->popover(__('admin-announcement.modal.fields.closable.help'))
-                        ->value($announcement?->closable ?? false)
+                        ->value($announcement?->closable ?? false),
                 ),
 
                 LayoutFactory::field(
                     CheckBox::make('is_active')
                         ->label(__('admin-announcement.modal.fields.is_active.label'))
                         ->popover(__('admin-announcement.modal.fields.is_active.help'))
-                        ->value($announcement?->isActive ?? true)
+                        ->value($announcement?->isActive ?? true),
                 ),
             ]),
         ];

@@ -29,7 +29,7 @@ class AnnouncementProvider extends ModuleServiceProvider
 
     public function register(\DI\Container $container): void
     {
-        $container->set(AnnouncementService::class, static fn () => new AnnouncementService());
+        $container->set(AnnouncementService::class, static fn() => new AnnouncementService());
     }
 
     /**

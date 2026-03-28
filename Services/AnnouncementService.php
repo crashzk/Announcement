@@ -15,7 +15,11 @@ class AnnouncementService
 
     public function __construct()
     {
-        $this->cachedItems = cache()->callback(self::CACHE_KEY, fn () => $this->getActiveAnnouncements(), self::CACHE_TIME);
+        $this->cachedItems = cache()->callback(
+            self::CACHE_KEY,
+            fn() => $this->getActiveAnnouncements(),
+            self::CACHE_TIME,
+        );
     }
 
     /**
@@ -34,11 +38,7 @@ class AnnouncementService
                 return false;
             }
 
-            return !($item['endAt'] !== null && $now > $item['endAt'])
-
-
-
-            ;
+            return !( $item['endAt'] !== null && $now > $item['endAt'] );
         });
     }
 
@@ -58,7 +58,25 @@ class AnnouncementService
      */
     public function getVisible(): array
     {
-        return array_filter($this->all(), fn ($item) => !$this->isDismissed($item['id']));
+        $isAuthed = user()->isLoggedIn();
+
+        return array_filter($this->all(), function ($item) use ($isAuthed) {
+            if ($this->isDismissed($item['id'])) {
+                return false;
+            }
+
+            $target = $item['target'] ?? 'all';
+
+            if ($target === 'guests' && $isAuthed) {
+                return false;
+            }
+
+            if ($target === 'auth' && !$isAuthed) {
+                return false;
+            }
+
+            return true;
+        });
     }
 
     /**
@@ -69,11 +87,14 @@ class AnnouncementService
         return [
             'id' => $announcement->id,
             'content' => $announcement->content,
+            'icon' => $announcement->icon,
+            'url' => $announcement->url,
             'buttonText' => $announcement->buttonText,
             'buttonUrl' => $announcement->buttonUrl,
             'buttonIcon' => $announcement->buttonIcon,
             'buttonNewTab' => $announcement->buttonNewTab,
             'type' => $announcement->type,
+            'target' => $announcement->target,
             'closable' => $announcement->closable,
             'isActive' => $announcement->isActive,
             'position' => $announcement->position,

@@ -21,6 +21,11 @@ return [
         'warning' => 'Warning',
         'error' => 'Error',
     ],
+    'targets' => [
+        'all' => 'Everyone',
+        'guests' => 'Guests only',
+        'auth' => 'Authorized only',
+    ],
     'modal' => [
         'create_title' => 'Create announcement',
         'edit_title' => 'Edit announcement',
@@ -33,6 +38,20 @@ return [
             'type' => [
                 'label' => 'Announcement type',
                 'help' => 'Determines the color scheme of the announcement',
+            ],
+            'icon' => [
+                'label' => 'Icon',
+                'placeholder' => 'ph.bold.megaphone-bold',
+                'help' => 'Custom icon (defaults to type icon if empty)',
+            ],
+            'url' => [
+                'label' => 'Bar link',
+                'placeholder' => '/page or https://...',
+                'help' => 'Makes the entire bar clickable (optional)',
+            ],
+            'target' => [
+                'label' => 'Audience',
+                'help' => 'Who will see this announcement',
             ],
             'button_text' => [
                 'label' => 'Button text',
